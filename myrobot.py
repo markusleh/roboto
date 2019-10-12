@@ -1,5 +1,7 @@
 from ev3dev2.motor import LargeMotor, OUTPUT_C, OUTPUT_B, OUTPUT_D, Motor, SpeedPercent, MoveTank, SpeedNativeUnits
 import time
+from ev3dev2.button import Button
+from ev3dev2.sound import Sound
 
 # line follower functions
 def follow_for_forever(tank):
@@ -8,11 +10,52 @@ def follow_for_forever(tank):
     """
     return True
 
-turns = ["left", "left"]
+turns = ["right"]
+#TURN_DEG = 322
+TURN_DEG = 280
+
+
 
 class MyMoveTank(MoveTank):
     def __init__(self, left_motor_port, right_motor_port, desc=None, motor_class=LargeMotor):
+        self.cur_turn_i = 0
+        self.button = Button()
         super().__init__(left_motor_port, right_motor_port, desc=None, motor_class=LargeMotor)
+
+    def get_next_turn(self):
+        deg_p = 0
+        speed_left = 0
+        speed_rigth = 0
+
+        # Next direction
+        dir = turns[self.cur_turn_i]
+        if dir == "left":
+            deg_p = -TURN_DEG
+            speed_left  = SpeedPercent(-10)
+            speed_rigth = SpeedPercent(10)
+
+        elif dir == "right":
+            deg_p = TURN_DEG
+            speed_left  = SpeedPercent(10)
+            speed_rigth = SpeedPercent(-10)
+
+        self.cur_turn_i = self.cur_turn_i + 1
+
+        return [speed_left, speed_rigth, deg_p]
+
+
+    def on_until_target(
+            self,
+            target_light_intensity
+        ):
+        while self.cs.reflected_light_intensity < target_light_intensity - 5:
+            self.on(SpeedPercent(30), SpeedPercent(30))
+
+        self.stop()
+        return
+
+
+
 
     def follow_line(self,
                     kp, ki, kd,
@@ -76,18 +119,53 @@ class MyMoveTank(MoveTank):
         last_error = 0.0
         derivative = 0.0
         off_line_count = 0
+
         speed_native_units = speed.to_native_units(self.left_motor)
+        print(speed_native_units)
         MAX_SPEED = SpeedNativeUnits(self.max_speed)
+        button = Button()
 
         while follow_for(self, **kwargs):
+            if "down" in button.buttons_pressed:
+                self.stop()
+                return
+
             reflected_light_intensity = self.cs.reflected_light_intensity
-            error = target_light_intensity - reflected_light_intensity
+            error =  reflected_light_intensity - target_light_intensity
             integral = integral + error
             derivative = error - last_error
+
+            print("target: {:^20} light: {:^20}, deri: {:^5}, integral: {:^5}".format(
+                target_light_intensity,
+                reflected_light_intensity,
+                derivative,
+                integral
+            ))
+
+            if derivative > 6: #or abs(integral) > 100:
+                self.stop()
+                print("Wrong way")
+                return
+            #    self.on_for_degrees(SpeedPercent(-10), SpeedPercent(10), 100)
+            #    integral = 0
+            #    last_error = 0
+            #    derivative = 0
+            #    off_line_count = 0
+            #    time.sleep(1)
+            #    continue
+
+            if integral > 150:
+                self.stop()
+                print("Too high integral")
+                integral = -100.0
+                # We are correcting heading too much to the left, make correction to right
+                self.on_for_degrees(SpeedPercent(30), SpeedPercent(-30), 150)
+                self.on_until_target(target_light_intensity)
+                continue
+
             last_error = error
             turn_native_units = (kp * error) + (ki * integral) + (kd * derivative)
-            prox = self.us.proximity
-            print("prox: {:^20} light: {:^20} turn_units: {:^20.2}".format(prox, reflected_light_intensity, turn_native_units))
+
 
             if not follow_left_edge:
                 turn_native_units *= -1
@@ -95,11 +173,30 @@ class MyMoveTank(MoveTank):
             left_speed = SpeedNativeUnits(speed_native_units - turn_native_units)
             right_speed = SpeedNativeUnits(speed_native_units + turn_native_units)
 
+
             # Is distance to wall too close?
-            if prox < prox_treshold:
-                print("Too close")
-                self.stop()
-                raise LineFollowErrorLostLine("Lost line")
+            #if self.us.proximity < prox_treshold:
+            #    print("Too close")
+            #    self.stop()
+            #    in_line = reflected_light_intensity >= white
+
+            #    turn_help = self.get_next_turn()
+            #    # If we are still in line, safe to turn straight away
+            #    if in_line:
+            #        self.on_for_degrees(turn_help[0], turn_help[1], turn_help[2])
+
+            #    else:
+            #        self.on_for_seconds(SpeedPercent(-10), SpeedPercent(-10), 1)
+            #        self.on_for_degrees(turn_help[0], turn_help[1], turn_help[2])
+
+            #    # Reset values for new straigth line
+            #    integral = 0
+            #    last_error = 0
+            #    derivative = 0
+            #    off_line_count = 0
+            #    time.sleep(2)
+            #    continue
+
 
             # Have we lost the line?
             if reflected_light_intensity >= white:

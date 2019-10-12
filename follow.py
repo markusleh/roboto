@@ -44,14 +44,21 @@ class Roboto:
         self.tank = MyMoveTank(OUTPUT_A, OUTPUT_B)
         self.tank.cs = ColorSensor(INPUT_4)
         #self.tank.us = InfraredSensor()
+	self.target = None
 
     def set_initial(self):
-        my_sound.speak(text="Calibrate")
+        my_sound.speak(text="Calibrate White")
         while "down" not in button.buttons_pressed:
             continue
         self.tank.cs.calibrate_white()
+        print("Calibrated: ", self.tank.)
+        my_sound.speak(text="Calibrate target")
+        while "down" not in button.buttons_pressed:
+            continue
+	target=self.tank.cs.reflected_light_intensity
         print("Calibrated: ", self.tank.cs.reflected_light_intensity)
         my_sound.speak(text="Done")
+	return target
 
     def test_movement(self):
         self.tank.on_for_seconds(SpeedPercent(60), SpeedPercent(60), 2)
@@ -72,13 +79,13 @@ class Roboto:
 
 button = Button()
 myRobot = Roboto()
-myRobot.set_initial()
+target=myRobot.set_initial()
 
 while True:
     while True:
         if "up" in button.buttons_pressed:
             break
-    myRobot.follow_line()
+    myRobot.follow_line(target_light_intensity=target)
 
 
 #print("Calibrate")

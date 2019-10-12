@@ -4,12 +4,9 @@ __author__ = 'Anton Vanhoucke'
 import evdev
 import ev3dev.auto as ev3
 import threading
-<<<<<<< HEAD
 import time
 from ev3dev2.motor import MoveTank, OUTPUT_B, OUTPUT_C, SpeedNativeUnits
-=======
 from ev3dev2.button import Button
->>>>>>> a8c48c65c6d579f8ca2327fecb62b4938fa7c3bb
 from queue import Queue
 
  
@@ -65,38 +62,34 @@ running = True
 class MotorThread(threading.Thread):
     def __init__(self):
         # Add more sensors and motors here if you need them
-<<<<<<< HEAD
         #self.left_motor = ev3.LargeMotor(ev3.OUTPUT_C)
         #self.right_motor = ev3.LargeMotor(ev3.OUTPUT_B)
         self.tank = MoveTank(OUTPUT_C, OUTPUT_B)
-
-=======
         self.left_motor = ev3.LargeMotor(ev3.OUTPUT_C)
         self.right_motor = ev3.LargeMotor(ev3.OUTPUT_B)
         self.hand_motor = ev3.MediumMotor(ev3.OUTPUT_A)
         #self.drop_motor = ev3.MediumMotor(ev3.OUTPUT_D)
         self.replay = replay # Are we recording or not?
-	    self.handpos=self.hand_motor.position
-	    self.handmin=0
-	    self.handmax=0
->>>>>>> a8c48c65c6d579f8ca2327fecb62b4938fa7c3bb
+        self.handpos=self.hand_motor.position
+        self.handmin=0
+        self.handmax=0
         threading.Thread.__init__(self)
 
     def calibrate(self):
          while True:
             if "up" in button.buttons_pressed:
-				break
-         self.handmin=self.hand_motor.position
+                break
+         self.handmin = self.hand_motor.position
 
          while True:
             if "up" in button.buttons_pressed:
-				break
-         self.handmax=self.hand_motor.position
+                break
+         self.handmax = self.hand_motor.position
 
     def run(self):
         print("Engine running!")
-		if self.handmax!=0:
-			self.calibrate()
+        if self.handmax!=0:
+            self.calibrate()
         # Change this function to suit your robot. 
         # The code below is for driving a simple tank.
         while running:
@@ -126,16 +119,14 @@ class MotorThread(threading.Thread):
 
             #self.right_motor.on_fo(duty_cycle_sp=right_dc)
             #self.left_motor.run_direct(duty_cycle_sp=left_dc)
-
-			if hand:
-				self.movehand()
-				hand=0
+            if hand:
+                self.movehand()
+                hand = 0
             self.movedrop(drop)
 
         #self.right_motor.stop()
         #self.left_motor.stop()
         self.tank.stop()
-
 
     def movehand(self):
         if abs(self.hand_motor.position - self.handmax) < 10:

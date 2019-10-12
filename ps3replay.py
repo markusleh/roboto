@@ -4,6 +4,8 @@ __author__ = 'Anton Vanhoucke'
 import evdev
 import ev3dev.auto as ev3
 import threading
+import time
+from ev3dev2.motor import MoveTank, OUTPUT_B, OUTPUT_C, SpeedNativeUnits
 from queue import Queue
 
  
@@ -59,9 +61,9 @@ running = True
 class MotorThread(threading.Thread):
     def __init__(self):
         # Add more sensors and motors here if you need them
-        self.left_motor = ev3.LargeMotor(ev3.OUTPUT_C)
-        self.right_motor = ev3.LargeMotor(ev3.OUTPUT_B)
-        self.replay = replay # Are we recording or not?
+        #self.left_motor = ev3.LargeMotor(ev3.OUTPUT_C)
+        #self.right_motor = ev3.LargeMotor(ev3.OUTPUT_B)
+        self.tank = MoveTank(OUTPUT_C, OUTPUT_B)
 
         threading.Thread.__init__(self)
 
@@ -76,25 +78,33 @@ class MotorThread(threading.Thread):
             # Do normal replay
             elif replay:
                 cur_record = record.get()
-                right_dc = cur_record[0]
-                left_dc = cur_record[1]
+                left_dc = cur_record[0][0]
+                left_speed = SpeedNativeUnits(cur_record[0][1])
+                right_dc = cur_record[1][0]
+                right_speed = SpeedNativeUnits(cur_record[1][1])
+                print(left_speed, left_dc, right_speed, right_dc)
+                self.tank.right_motor.on_to_position(right_speed, right_dc)
+                self.tank.left_motor.on_to_position(left_speed, left_dc, block=True)
 
             # Run by controller
             else:
                 right_dc = clamp(-speed-turn)
                 left_dc = clamp(-speed+turn)
+                self.tank.on(left_dc, right_dc)
                 if do_record:
-                    record.put((right_dc, left_dc))
+                    record.put(([self.tank.left_motor.position, self.tank.left_motor.speed], [self.tank.right_motor.position, self.tank.left_motor.speed]))
 
-            
-            self.right_motor.run_direct(duty_cycle_sp=right_dc)
-            self.left_motor.run_direct(duty_cycle_sp=left_dc)
+
+
+            #self.right_motor.on_fo(duty_cycle_sp=right_dc)
+            #self.left_motor.run_direct(duty_cycle_sp=left_dc)
 
             self.movehand(hand)
             self.movedrop(drop)
 
-        self.right_motor.stop()
-        self.left_motor.stop()
+        #self.right_motor.stop()
+        #self.left_motor.stop()
+        self.tank.stop()
 
 
     def movehand(self, direction):

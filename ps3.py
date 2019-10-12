@@ -1,5 +1,5 @@
-import ev3dev2
-import ev3dev2.auto as ev3
+import evdev
+import ev3dev.auto as ev3
 import threading
 
 def scale(val, src, dst):
@@ -8,7 +8,7 @@ def scale(val, src, dst):
 def scale_stick(value):
     return scale(value, (0,255), (-100,100))
 
-devices = [ev3dev2.InputDevice(fn) for fn in ev3dev2.list_devices()]
+devices = [evdev.InputDevice(fn) for fn in evdev.list_devices()]
 for device in devices:
     if device.name == "PLAYSTATION(R)3 Controller":
         ps3dev = device.fn

@@ -4,8 +4,12 @@ __author__ = 'Anton Vanhoucke'
 import evdev
 import ev3dev.auto as ev3
 import threading
+<<<<<<< HEAD
 import time
 from ev3dev2.motor import MoveTank, OUTPUT_B, OUTPUT_C, SpeedNativeUnits
+=======
+from ev3dev2.button import Button
+>>>>>>> a8c48c65c6d579f8ca2327fecb62b4938fa7c3bb
 from queue import Queue
 
  
@@ -61,14 +65,38 @@ running = True
 class MotorThread(threading.Thread):
     def __init__(self):
         # Add more sensors and motors here if you need them
+<<<<<<< HEAD
         #self.left_motor = ev3.LargeMotor(ev3.OUTPUT_C)
         #self.right_motor = ev3.LargeMotor(ev3.OUTPUT_B)
         self.tank = MoveTank(OUTPUT_C, OUTPUT_B)
 
+=======
+        self.left_motor = ev3.LargeMotor(ev3.OUTPUT_C)
+        self.right_motor = ev3.LargeMotor(ev3.OUTPUT_B)
+        self.hand_motor = ev3.MediumMotor(ev3.OUTPUT_A)
+        #self.drop_motor = ev3.MediumMotor(ev3.OUTPUT_D)
+        self.replay = replay # Are we recording or not?
+	    self.handpos=self.hand_motor.position
+	    self.handmin=0
+	    self.handmax=0
+>>>>>>> a8c48c65c6d579f8ca2327fecb62b4938fa7c3bb
         threading.Thread.__init__(self)
+
+    def calibrate(self):
+         while True:
+            if "up" in button.buttons_pressed:
+				break
+         self.handmin=self.hand_motor.position
+
+         while True:
+            if "up" in button.buttons_pressed:
+				break
+         self.handmax=self.hand_motor.position
 
     def run(self):
         print("Engine running!")
+		if self.handmax!=0:
+			self.calibrate()
         # Change this function to suit your robot. 
         # The code below is for driving a simple tank.
         while running:
@@ -99,7 +127,9 @@ class MotorThread(threading.Thread):
             #self.right_motor.on_fo(duty_cycle_sp=right_dc)
             #self.left_motor.run_direct(duty_cycle_sp=left_dc)
 
-            self.movehand(hand)
+			if hand:
+				self.movehand()
+				hand=0
             self.movedrop(drop)
 
         #self.right_motor.stop()
@@ -107,13 +137,11 @@ class MotorThread(threading.Thread):
         self.tank.stop()
 
 
-    def movehand(self, direction):
-        if direction == 1:
-            pass
-            #self.hand_motor.run_to_abs_pos(position_sp=self.handraised, speed_sp=100)
-        else:
-            pass
-            #self.hand_motor.run_to_abs_pos(position_sp=self.handraised-50,speed_sp=100)
+    def movehand(self):
+        if abs(self.hand_motor.position - self.handmax) < 10:
+            self.hand_motor.run_to_abs_pos(position_sp=self.handmin, speed_sp=100)
+        elif abs(self.hand_motor.position - self.handmin) < 10:
+            self.hand_motor.run_to_abs_pos(position_sp=self.handmax,speed_sp=100)
 
     def movedrop(self, direction):
         if direction == 1:
@@ -132,6 +160,7 @@ class MotorThread(threading.Thread):
 
 
 # Multithreading magics
+button = Button()
 motor_thread = MotorThread()
 motor_thread.setDaemon(True)
 motor_thread.start()
